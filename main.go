@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"io"
 	"io/fs"
 	"log"
 	"net/http"
@@ -64,6 +65,46 @@ func main() {
 	}
 }
 
+type spaHandler struct {
+	fs fs.FS
+}
+
+func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	if path == "/" {
+		path = "index.html"
+	} else if len(path) > 0 && path[0] == '/' {
+		path = path[1:]
+	}
+
+	f, err := h.fs.Open(path)
+	if err != nil {
+		// SPA fallback
+		path = "index.html"
+		f, err = h.fs.Open(path)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+	}
+	defer f.Close()
+
+	stat, err := f.Stat()
+	if err != nil || stat.IsDir() {
+		path = "index.html"
+		f2, err := h.fs.Open(path)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		f.Close()
+		f = f2
+		stat, _ = f.Stat()
+	}
+
+	http.ServeContent(w, r, stat.Name(), stat.ModTime(), f.(io.ReadSeeker))
+}
+
 func serveSPA(r *gin.Engine) {
 	distFS, err := fs.Sub(frontendFS, "frontend/dist")
 	if err != nil {
@@ -71,12 +112,5 @@ func serveSPA(r *gin.Engine) {
 		return
 	}
 
-	fileServer := http.FileServer(http.FS(distFS))
-	r.NoRoute(func(c *gin.Context) {
-		path := c.Request.URL.Path
-		if path == "/" {
-			c.Request.URL.Path = "/index.html"
-		}
-		fileServer.ServeHTTP(c.Writer, c.Request)
-	})
+	r.NoRoute(gin.WrapH(spaHandler{fs: distFS}))
 }

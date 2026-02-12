@@ -25,9 +25,10 @@ export function Layout({ children }: { children: ReactNode }) {
       <div className="absolute inset-0 bg-black/45 dark:bg-black/55" />
 
       <header className="relative z-10">
-        <div className="mx-auto flex max-w-5xl items-center justify-center px-4 py-4">
-          <div className="flex items-center gap-2">
-            <nav className="hidden sm:flex items-center gap-1 rounded-md border bg-card/75 p-1 backdrop-blur-md">
+        <div className="mx-auto grid max-w-5xl grid-cols-3 items-center px-4 py-4">
+          <div />
+          <div className="hidden sm:flex justify-center">
+            <nav className="flex items-center gap-1 rounded-md border bg-card/75 p-1 backdrop-blur-md">
               {navItems.map((item) => (
                 <NavLink
                   key={item.path}
@@ -43,6 +44,8 @@ export function Layout({ children }: { children: ReactNode }) {
                 </NavLink>
               ))}
             </nav>
+          </div>
+          <div className="flex items-center justify-end gap-2">
             <LanguageSelector />
             <ThemeToggle />
           </div>

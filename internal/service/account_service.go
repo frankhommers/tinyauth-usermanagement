@@ -2,7 +2,6 @@ package service
 
 import (
 	"crypto/rand"
-	"database/sql"
 	"errors"
 	"fmt"
 	"image/png"
@@ -23,7 +22,7 @@ import (
 
 type AccountService struct {
 	cfg             config.Config
-	store           *store.SQLiteStore
+	store           *store.Store
 	users           *UserFileService
 	mail            *MailService
 	docker          *DockerService
@@ -31,7 +30,7 @@ type AccountService struct {
 	sms             provider.SMSProvider
 }
 
-func NewAccountService(cfg config.Config, st *store.SQLiteStore, users *UserFileService, mail *MailService, docker *DockerService, passwordTargets *provider.PasswordTargetProvider, sms provider.SMSProvider) *AccountService {
+func NewAccountService(cfg config.Config, st *store.Store, users *UserFileService, mail *MailService, docker *DockerService, passwordTargets *provider.PasswordTargetProvider, sms provider.SMSProvider) *AccountService {
 	return &AccountService{cfg: cfg, store: st, users: users, mail: mail, docker: docker, passwordTargets: passwordTargets, sms: sms}
 }
 
@@ -45,25 +44,21 @@ func (s *AccountService) RequestPasswordReset(username string) error {
 	}
 	token := uuid.NewString()
 	exp := time.Now().Add(time.Duration(s.cfg.ResetTokenTTLSeconds) * time.Second).Unix()
-	_, err = s.store.DB.Exec(`INSERT INTO reset_tokens(token, username, expires_at, used) VALUES(?,?,?,0)`, token, u.Username, exp)
-	if err != nil {
+	if err := s.store.CreateResetToken(token, u.Username, exp); err != nil {
 		return err
 	}
 	return s.mail.SendResetEmail(u.Username, token)
 }
 
 func (s *AccountService) ResetPassword(token, newPassword string) error {
-	var username string
-	var expires int64
-	var used int
-	err := s.store.DB.QueryRow(`SELECT username, expires_at, used FROM reset_tokens WHERE token = ?`, token).Scan(&username, &expires, &used)
+	username, expiresAt, used, err := s.store.GetResetToken(token)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return errors.New("invalid token")
-		}
 		return err
 	}
-	if used == 1 || time.Now().Unix() > expires {
+	if username == "" {
+		return errors.New("invalid token")
+	}
+	if used || time.Now().Unix() > expiresAt {
 		return errors.New("token expired")
 	}
 	hash, err := HashPassword(newPassword)
@@ -81,7 +76,7 @@ func (s *AccountService) ResetPassword(token, newPassword string) error {
 	if err := s.users.Upsert(u); err != nil {
 		return err
 	}
-	_, _ = s.store.DB.Exec(`UPDATE reset_tokens SET used = 1 WHERE token = ?`, token)
+	_ = s.store.MarkResetTokenUsed(token)
 	s.docker.RestartTinyauth()
 	s.syncPasswordTargets(username, newPassword, hash)
 	return nil
@@ -106,8 +101,7 @@ func (s *AccountService) SignupWithPhone(username, email, password, phone string
 	}
 	if s.cfg.SignupRequireApproval {
 		id := uuid.NewString()
-		_, err = s.store.DB.Exec(`INSERT INTO pending_signups(id, username, email, password_hash, created_at, approved) VALUES(?,?,?,?,?,0)`, id, username, email, hash, time.Now().Unix())
-		if err != nil {
+		if err := s.store.CreatePendingSignup(id, username, email, hash, time.Now().Unix()); err != nil {
 			return "", err
 		}
 		if phone != "" {
@@ -127,14 +121,14 @@ func (s *AccountService) SignupWithPhone(username, email, password, phone string
 }
 
 func (s *AccountService) ApproveSignup(id string) error {
-	var username, hash string
-	if err := s.store.DB.QueryRow(`SELECT username, password_hash FROM pending_signups WHERE id = ?`, id).Scan(&username, &hash); err != nil {
+	username, hash, err := s.store.GetPendingSignup(id)
+	if err != nil {
 		return err
 	}
 	if err := s.users.Upsert(UserRecord{Username: username, Password: hash}); err != nil {
 		return err
 	}
-	_, _ = s.store.DB.Exec(`UPDATE pending_signups SET approved = 1 WHERE id = ?`, id)
+	_ = s.store.ApprovePendingSignup(id)
 	s.docker.RestartTinyauth()
 	return nil
 }

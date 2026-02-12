@@ -9,7 +9,6 @@ import (
 type Config struct {
 	Port                    string
 	UsersFilePath           string
-	DatabasePath            string
 	SessionCookieName       string
 	SessionSecret           string
 	SessionTTLSeconds       int64
@@ -32,7 +31,6 @@ func Load() Config {
 	return Config{
 		Port:                  getEnv("PORT", "8080"),
 		UsersFilePath:         getEnv("USERS_FILE_PATH", "/data/users.txt"),
-		DatabasePath:          getEnv("SQLITE_PATH", "/data/usermanagement.db"),
 		SessionCookieName:     getEnv("SESSION_COOKIE_NAME", "tinyauth_um_session"),
 		SessionSecret:         getEnv("SESSION_SECRET", "dev-secret-change-me"),
 		SessionTTLSeconds:     getEnvInt64("SESSION_TTL_SECONDS", 86400),

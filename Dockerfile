@@ -8,11 +8,10 @@ RUN corepack enable && corepack prepare pnpm@latest --activate && pnpm install &
 # backend build
 FROM golang:1.24-alpine AS backend-builder
 WORKDIR /app
-RUN apk add --no-cache git build-base
 COPY go.mod go.sum* ./
 COPY . .
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
-RUN go mod tidy && CGO_ENABLED=1 GOOS=linux go build -o /out/tinyauth-usermanagement ./main.go
+RUN go mod tidy && CGO_ENABLED=0 GOOS=linux go build -o /out/tinyauth-usermanagement ./main.go
 
 FROM alpine:3.21
 RUN apk add --no-cache ca-certificates

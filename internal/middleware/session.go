@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"time"
 
 	"tinyauth-usermanagement/internal/config"
 	"tinyauth-usermanagement/internal/store"
@@ -9,17 +10,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SessionMiddleware(cfg config.Config, st *store.SQLiteStore) gin.HandlerFunc {
+func SessionMiddleware(cfg config.Config, st *store.Store) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token, err := c.Cookie(cfg.SessionCookieName)
 		if err != nil || token == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 			return
 		}
-		var username string
-		var expires int64
-		err = st.DB.QueryRow(`SELECT username, expires_at FROM sessions WHERE token = ?`, token).Scan(&username, &expires)
-		if err != nil {
+		username, expiresAt, err := st.GetSession(token)
+		if err != nil || username == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+		if time.Now().Unix() > expiresAt {
+			_ = st.DeleteSession(token)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 			return
 		}

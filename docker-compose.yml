@@ -16,7 +16,7 @@ services:
     environment:
       PORT: "8080"
       USERS_FILE_PATH: /data/users.txt
-      SQLITE_PATH: /data/usermanagement.db
+      USERS_TOML: /data/users.toml
       TINYAUTH_CONTAINER_NAME: tinyauth
       DOCKER_SOCKET_PATH: /var/run/docker.sock
       MAIL_BASE_URL: http://localhost:8080

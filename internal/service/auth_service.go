@@ -2,7 +2,6 @@ package service
 
 import (
 	"crypto/rand"
-	"database/sql"
 	"encoding/hex"
 	"errors"
 	"time"
@@ -15,11 +14,11 @@ import (
 
 type AuthService struct {
 	cfg   config.Config
-	store *store.SQLiteStore
+	store *store.Store
 	users *UserFileService
 }
 
-func NewAuthService(cfg config.Config, st *store.SQLiteStore, users *UserFileService) *AuthService {
+func NewAuthService(cfg config.Config, st *store.Store, users *UserFileService) *AuthService {
 	return &AuthService{cfg: cfg, store: st, users: users}
 }
 
@@ -41,30 +40,26 @@ func (s *AuthService) Login(username, password string) (string, error) {
 	}
 	now := time.Now().Unix()
 	expires := now + s.cfg.SessionTTLSeconds
-	_, err = s.store.DB.Exec(`INSERT INTO sessions(token, username, created_at, expires_at) VALUES(?,?,?,?)`, token, u.Username, now, expires)
-	if err != nil {
+	if err := s.store.CreateSession(token, u.Username, now, expires); err != nil {
 		return "", err
 	}
 	return token, nil
 }
 
 func (s *AuthService) Logout(token string) error {
-	_, err := s.store.DB.Exec(`DELETE FROM sessions WHERE token = ?`, token)
-	return err
+	return s.store.DeleteSession(token)
 }
 
 func (s *AuthService) SessionUsername(token string) (string, error) {
-	var username string
-	var expires int64
-	err := s.store.DB.QueryRow(`SELECT username, expires_at FROM sessions WHERE token = ?`, token).Scan(&username, &expires)
+	username, expiresAt, err := s.store.GetSession(token)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return "", errors.New("unauthorized")
-		}
 		return "", err
 	}
-	if time.Now().Unix() > expires {
-		_, _ = s.store.DB.Exec(`DELETE FROM sessions WHERE token = ?`, token)
+	if username == "" {
+		return "", errors.New("unauthorized")
+	}
+	if time.Now().Unix() > expiresAt {
+		_ = s.store.DeleteSession(token)
 		return "", errors.New("unauthorized")
 	}
 	return username, nil

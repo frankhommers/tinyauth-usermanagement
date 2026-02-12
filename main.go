@@ -24,11 +24,11 @@ var frontendFS embed.FS
 func main() {
 	cfg := config.Load()
 
-	sqliteStore, err := store.NewSQLiteStore(cfg.DatabasePath)
+	st, err := store.NewStore("")
 	if err != nil {
-		log.Fatalf("failed to init sqlite store: %v", err)
+		log.Fatalf("failed to init store: %v", err)
 	}
-	defer sqliteStore.Close()
+	defer st.Close()
 
 	// Initialize providers
 	passwordTargets := provider.NewPasswordTargetProvider()
@@ -37,8 +37,8 @@ func main() {
 	usersSvc := service.NewUserFileService(cfg)
 	mailSvc := service.NewMailService(cfg)
 	dockerSvc := service.NewDockerService(cfg)
-	authSvc := service.NewAuthService(cfg, sqliteStore, usersSvc)
-	accountSvc := service.NewAccountService(cfg, sqliteStore, usersSvc, mailSvc, dockerSvc, passwordTargets, smsProvider)
+	authSvc := service.NewAuthService(cfg, st, usersSvc)
+	accountSvc := service.NewAccountService(cfg, st, usersSvc, mailSvc, dockerSvc, passwordTargets, smsProvider)
 
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
@@ -57,7 +57,7 @@ func main() {
 		public.Register(api)
 
 		authed := api.Group("")
-		authed.Use(middleware.SessionMiddleware(cfg, sqliteStore))
+		authed.Use(middleware.SessionMiddleware(cfg, st))
 		accountHandler := handler.NewAccountHandler(accountSvc)
 		accountHandler.Register(authed)
 	}

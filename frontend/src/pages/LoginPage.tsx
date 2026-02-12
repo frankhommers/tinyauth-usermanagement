@@ -1,4 +1,4 @@
-import { Alert, Button, Stack, TextField, Typography } from '@mui/material'
+import { Alert, Button, Paper, Stack, TextField, Typography } from '@mui/material'
 import { useState } from 'react'
 import { api } from '../api/client'
 
@@ -16,11 +16,34 @@ export default function LoginPage() {
     }
   }
 
-  return <Stack spacing={2} maxWidth={420}>
-    <Typography variant="h5">Login</Typography>
-    {msg && <Alert severity="info">{msg}</Alert>}
-    <TextField label="Username" value={username} onChange={e => setUsername(e.target.value)} />
-    <TextField type="password" label="Password" value={password} onChange={e => setPassword(e.target.value)} />
-    <Button variant="contained" onClick={submit}>Login</Button>
-  </Stack>
+  return (
+    <Paper
+      elevation={2}
+      sx={{
+        width: '100%',
+        maxWidth: 400,
+        p: { xs: 2, sm: 4 },
+        mt: { xs: 2, sm: 4 },
+      }}
+    >
+      <Stack spacing={2}>
+        <Typography variant="h5" textAlign="center">Login</Typography>
+        {msg && <Alert severity="info">{msg}</Alert>}
+        <TextField
+          label="Username"
+          value={username}
+          onChange={e => setUsername(e.target.value)}
+          fullWidth
+        />
+        <TextField
+          type="password"
+          label="Password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          fullWidth
+        />
+        <Button variant="contained" onClick={submit} fullWidth>Login</Button>
+      </Stack>
+    </Paper>
+  )
 }

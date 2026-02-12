@@ -1,14 +1,18 @@
 package service
 
 import (
+	"crypto/rand"
 	"database/sql"
 	"errors"
 	"fmt"
 	"image/png"
+	"log"
+	"math/big"
 	"strings"
 	"time"
 
 	"tinyauth-usermanagement/internal/config"
+	"tinyauth-usermanagement/internal/provider"
 	"tinyauth-usermanagement/internal/store"
 
 	"github.com/google/uuid"
@@ -18,15 +22,17 @@ import (
 )
 
 type AccountService struct {
-	cfg    config.Config
-	store  *store.SQLiteStore
-	users  *UserFileService
-	mail   *MailService
-	docker *DockerService
+	cfg             config.Config
+	store           *store.SQLiteStore
+	users           *UserFileService
+	mail            *MailService
+	docker          *DockerService
+	passwordTargets *provider.PasswordTargetProvider
+	sms             provider.SMSProvider
 }
 
-func NewAccountService(cfg config.Config, st *store.SQLiteStore, users *UserFileService, mail *MailService, docker *DockerService) *AccountService {
-	return &AccountService{cfg: cfg, store: st, users: users, mail: mail, docker: docker}
+func NewAccountService(cfg config.Config, st *store.SQLiteStore, users *UserFileService, mail *MailService, docker *DockerService, passwordTargets *provider.PasswordTargetProvider, sms provider.SMSProvider) *AccountService {
+	return &AccountService{cfg: cfg, store: st, users: users, mail: mail, docker: docker, passwordTargets: passwordTargets, sms: sms}
 }
 
 func (s *AccountService) RequestPasswordReset(username string) error {
@@ -77,10 +83,15 @@ func (s *AccountService) ResetPassword(token, newPassword string) error {
 	}
 	_, _ = s.store.DB.Exec(`UPDATE reset_tokens SET used = 1 WHERE token = ?`, token)
 	s.docker.RestartTinyauth()
+	s.syncPasswordTargets(username, newPassword, hash)
 	return nil
 }
 
 func (s *AccountService) Signup(username, email, password string) (string, error) {
+	return s.SignupWithPhone(username, email, password, "")
+}
+
+func (s *AccountService) SignupWithPhone(username, email, password, phone string) (string, error) {
 	if username == "" || password == "" {
 		return "", errors.New("username and password required")
 	}
@@ -99,12 +110,19 @@ func (s *AccountService) Signup(username, email, password string) (string, error
 		if err != nil {
 			return "", err
 		}
+		if phone != "" {
+			_ = s.store.SetPhone(username, phone)
+		}
 		return id, nil
 	}
 	if err := s.users.Upsert(UserRecord{Username: username, Password: hash}); err != nil {
 		return "", err
 	}
+	if phone != "" {
+		_ = s.store.SetPhone(username, phone)
+	}
 	s.docker.RestartTinyauth()
+	s.syncPasswordTargets(username, password, hash)
 	return "approved", nil
 }
 
@@ -129,7 +147,16 @@ func (s *AccountService) Profile(username string) (map[string]any, error) {
 	if !ok {
 		return nil, errors.New("not found")
 	}
-	return map[string]any{"username": u.Username, "totpEnabled": strings.TrimSpace(u.TotpSecret) != ""}, nil
+	phone, _ := s.store.GetPhone(username)
+	return map[string]any{
+		"username":    u.Username,
+		"totpEnabled": strings.TrimSpace(u.TotpSecret) != "",
+		"phone":       phone,
+	}, nil
+}
+
+func (s *AccountService) SetPhone(username, phone string) error {
+	return s.store.SetPhone(username, phone)
 }
 
 func (s *AccountService) ChangePassword(username, oldPassword, newPassword string) error {
@@ -152,7 +179,89 @@ func (s *AccountService) ChangePassword(username, oldPassword, newPassword strin
 		return err
 	}
 	s.docker.RestartTinyauth()
+	s.syncPasswordTargets(username, newPassword, hash)
 	return nil
+}
+
+// syncPasswordTargets sends password to all configured webhook targets (fire and forget).
+func (s *AccountService) syncPasswordTargets(username, plainPassword, hashedPassword string) {
+	if s.passwordTargets == nil {
+		return
+	}
+	go func() {
+		errs := s.passwordTargets.SyncPassword(username, plainPassword, hashedPassword)
+		for _, err := range errs {
+			log.Printf("[password-targets] sync error: %v", err)
+		}
+	}()
+}
+
+// RequestSMSReset sends a reset code via SMS.
+func (s *AccountService) RequestSMSReset(phone string) error {
+	if s.sms == nil {
+		return errors.New("SMS not configured")
+	}
+	username, err := s.store.FindUserByPhone(phone)
+	if err != nil {
+		return err
+	}
+	if username == "" {
+		// Don't leak whether phone exists
+		return nil
+	}
+
+	code, err := generateNumericCode(6)
+	if err != nil {
+		return err
+	}
+
+	id := uuid.NewString()
+	expiresAt := time.Now().Add(10 * time.Minute).Unix()
+	if err := s.store.StoreSMSResetCode(id, username, code, expiresAt); err != nil {
+		return err
+	}
+
+	msg := fmt.Sprintf("Your password reset code is: %s (valid for 10 minutes)", code)
+	if err := s.sms.SendSMS(phone, msg); err != nil {
+		log.Printf("[sms] failed to send SMS to %s: %v", phone, err)
+		return fmt.Errorf("failed to send SMS")
+	}
+
+	return nil
+}
+
+// ResetPasswordSMS verifies a code and resets the password.
+func (s *AccountService) ResetPasswordSMS(phone, code, newPassword string) error {
+	username, err := s.store.VerifySMSResetCode(phone, code)
+	if err != nil {
+		return err
+	}
+
+	hash, err := HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+
+	u, ok, err := s.users.Find(username)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return errors.New("user not found")
+	}
+	u.Password = hash
+	if err := s.users.Upsert(u); err != nil {
+		return err
+	}
+
+	s.docker.RestartTinyauth()
+	s.syncPasswordTargets(username, newPassword, hash)
+	return nil
+}
+
+// SMSEnabled returns true if SMS provider is configured.
+func (s *AccountService) SMSEnabled() bool {
+	return s.sms != nil
 }
 
 func (s *AccountService) TotpSetup(username string) (secret, otpURL string, pngBytes []byte, err error) {
@@ -223,4 +332,17 @@ func (s *AccountService) TotpRecover(username, recoveryKey, newSecret, code stri
 
 func (s *AccountService) ValidateToken(token string) (*otp.Key, error) {
 	return otp.NewKeyFromURL(token)
+}
+
+// generateNumericCode generates a cryptographically random numeric code of the given length.
+func generateNumericCode(length int) (string, error) {
+	code := make([]byte, length)
+	for i := range code {
+		n, err := rand.Int(rand.Reader, big.NewInt(10))
+		if err != nil {
+			return "", err
+		}
+		code[i] = byte('0' + n.Int64())
+	}
+	return string(code), nil
 }

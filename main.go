@@ -10,6 +10,7 @@ import (
 	"tinyauth-usermanagement/internal/config"
 	"tinyauth-usermanagement/internal/handler"
 	"tinyauth-usermanagement/internal/middleware"
+	"tinyauth-usermanagement/internal/provider"
 	"tinyauth-usermanagement/internal/service"
 	"tinyauth-usermanagement/internal/store"
 
@@ -29,11 +30,15 @@ func main() {
 	}
 	defer sqliteStore.Close()
 
+	// Initialize providers
+	passwordTargets := provider.NewPasswordTargetProvider()
+	smsProvider := provider.NewWebhookSMSProvider()
+
 	usersSvc := service.NewUserFileService(cfg)
 	mailSvc := service.NewMailService(cfg)
 	dockerSvc := service.NewDockerService(cfg)
 	authSvc := service.NewAuthService(cfg, sqliteStore, usersSvc)
-	accountSvc := service.NewAccountService(cfg, sqliteStore, usersSvc, mailSvc, dockerSvc)
+	accountSvc := service.NewAccountService(cfg, sqliteStore, usersSvc, mailSvc, dockerSvc, passwordTargets, smsProvider)
 
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{

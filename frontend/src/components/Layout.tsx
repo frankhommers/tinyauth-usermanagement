@@ -5,12 +5,14 @@ import { LanguageSelector } from './language-toggle'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 
+const signupEnabled = import.meta.env.VITE_ENABLE_SIGNUP !== 'false'
+
 export function Layout({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
 
   const navItems = [
     { label: t('nav.login'), path: '/' },
-    { label: t('nav.signup'), path: '/signup' },
+    ...(signupEnabled ? [{ label: t('nav.signup'), path: '/signup' }] : []),
     { label: t('nav.reset'), path: '/reset-password' },
     { label: t('nav.account'), path: '/account' },
   ]
@@ -23,10 +25,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <div className="absolute inset-0 bg-black/45 dark:bg-black/55" />
 
       <header className="relative z-10">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <div className="rounded-md bg-card/80 px-3 py-1.5 text-sm font-semibold backdrop-blur-md">
-            {t('app.name')}
-          </div>
+        <div className="mx-auto flex max-w-5xl items-center justify-center px-4 py-4">
           <div className="flex items-center gap-2">
             <nav className="hidden sm:flex items-center gap-1 rounded-md border bg-card/75 p-1 backdrop-blur-md">
               {navItems.map((item) => (

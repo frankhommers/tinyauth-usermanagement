@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
+const signupEnabled = import.meta.env.VITE_ENABLE_SIGNUP !== 'false'
+
 export default function LoginPage() {
   const { t } = useTranslation()
   const [username, setUsername] = useState('')
@@ -46,10 +48,12 @@ export default function LoginPage() {
           {t('loginPage.submit')}
         </Button>
       </CardContent>
-      <CardFooter className="flex justify-between text-sm">
-        <Link to="/signup" className="text-muted-foreground hover:text-foreground">
-          {t('loginPage.createAccount')}
-        </Link>
+      <CardFooter className={signupEnabled ? "flex justify-between text-sm" : "flex justify-end text-sm"}>
+        {signupEnabled && (
+          <Link to="/signup" className="text-muted-foreground hover:text-foreground">
+            {t('loginPage.createAccount')}
+          </Link>
+        )}
         <Link to="/reset-password" className="text-muted-foreground hover:text-foreground">
           {t('loginPage.forgotPassword')}
         </Link>

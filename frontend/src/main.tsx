@@ -10,6 +10,8 @@ import AccountPage from './pages/AccountPage'
 import './i18n'
 import './index.css'
 
+const signupEnabled = import.meta.env.VITE_ENABLE_SIGNUP !== 'false'
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider defaultTheme="system" storageKey="tinyauth-theme">
@@ -17,7 +19,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Layout>
           <Routes>
             <Route path='/' element={<LoginPage />} />
-            <Route path='/signup' element={<SignupPage />} />
+            {signupEnabled && <Route path='/signup' element={<SignupPage />} />}
             <Route path='/reset-password' element={<ResetPasswordPage />} />
             <Route path='/account' element={<AccountPage />} />
           </Routes>

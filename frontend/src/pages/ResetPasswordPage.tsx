@@ -1,18 +1,22 @@
-import { Alert, Button, Divider, Paper, Stack, Tab, Tabs, TextField, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../api/client'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
 
 export default function ResetPasswordPage() {
-  const [tab, setTab] = useState(0)
+  const { t } = useTranslation()
+  const [tab, setTab] = useState<'email' | 'sms'>('email')
   const [smsEnabled, setSmsEnabled] = useState(false)
 
-  // Email reset state
   const [username, setUsername] = useState('')
   const [token, setToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [msg, setMsg] = useState('')
 
-  // SMS reset state
   const [phone, setPhone] = useState('')
   const [smsCode, setSmsCode] = useState('')
   const [smsNewPassword, setSmsNewPassword] = useState('')
@@ -20,122 +24,132 @@ export default function ResetPasswordPage() {
   const [codeSent, setCodeSent] = useState(false)
 
   useEffect(() => {
-    api.get('/features').then(res => {
-      setSmsEnabled(res.data.smsEnabled === true)
-    }).catch(() => {})
+    api
+      .get('/features')
+      .then((res) => {
+        setSmsEnabled(res.data.smsEnabled === true)
+      })
+      .catch(() => {})
   }, [])
 
   return (
-    <Paper
-      elevation={2}
-      sx={{
-        width: '100%',
-        maxWidth: 400,
-        p: { xs: 2, sm: 4 },
-        mt: { xs: 2, sm: 4 },
-      }}
-    >
-      <Stack spacing={2}>
-        <Typography variant="h5" textAlign="center">Password Reset</Typography>
-
+    <Card className="min-w-xs sm:min-w-sm">
+      <CardHeader>
+        <CardTitle className="text-center text-3xl">{t('resetPage.title')}</CardTitle>
+        <CardDescription className="text-center">{t('resetPage.description')}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
         {smsEnabled && (
-          <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="fullWidth">
-            <Tab label="Email" />
-            <Tab label="SMS" />
-          </Tabs>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant={tab === 'email' ? 'default' : 'outline'} onClick={() => setTab('email')}>
+              {t('resetPage.tabEmail')}
+            </Button>
+            <Button variant={tab === 'sms' ? 'default' : 'outline'} onClick={() => setTab('sms')}>
+              {t('resetPage.tabSms')}
+            </Button>
+          </div>
         )}
 
-        {tab === 0 && (
+        {tab === 'email' && (
           <>
-            {msg && <Alert severity="info">{msg}</Alert>}
-            <TextField
-              label="Username/email"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              fullWidth
-            />
-            <Button variant="outlined" fullWidth onClick={async () => {
-              await api.post('/password-reset/request', { username })
-              setMsg('Als user bestaat is mail verstuurd (of in logs)')
-            }}>Request reset</Button>
-            <Divider />
-            <TextField
-              label="Token"
-              value={token}
-              onChange={e => setToken(e.target.value)}
-              fullWidth
-            />
-            <TextField
-              type="password"
-              label="New password"
-              value={newPassword}
-              onChange={e => setNewPassword(e.target.value)}
-              fullWidth
-            />
-            <Button variant="contained" fullWidth onClick={async () => {
-              try {
-                await api.post('/password-reset/confirm', { token, newPassword })
-                setMsg('Wachtwoord gewijzigd')
-              } catch (e: any) {
-                setMsg(e?.response?.data?.error || 'Reset mislukt')
-              }
-            }}>Reset password</Button>
+            {msg && <div className="rounded-md border bg-muted px-3 py-2 text-sm">{msg}</div>}
+            <div className="grid gap-2">
+              <Label htmlFor="username">{t('resetPage.usernameOrEmail')}</Label>
+              <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} />
+            </div>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                await api.post('/password-reset/request', { username })
+                setMsg(t('resetPage.requestResetSuccess'))
+              }}
+            >
+              {t('resetPage.requestReset')}
+            </Button>
+            <Separator />
+            <div className="grid gap-2">
+              <Label htmlFor="token">{t('common.token')}</Label>
+              <Input id="token" value={token} onChange={(e) => setToken(e.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="newPassword">{t('common.newPassword')}</Label>
+              <Input id="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            </div>
+            <Button
+              onClick={async () => {
+                try {
+                  await api.post('/password-reset/confirm', { token, newPassword })
+                  setMsg(t('resetPage.resetSuccess'))
+                } catch (e: any) {
+                  setMsg(e?.response?.data?.error || t('resetPage.resetError'))
+                }
+              }}
+            >
+              {t('resetPage.resetPassword')}
+            </Button>
           </>
         )}
 
-        {tab === 1 && smsEnabled && (
+        {tab === 'sms' && smsEnabled && (
           <>
-            {smsMsg && <Alert severity="info">{smsMsg}</Alert>}
+            {smsMsg && <div className="rounded-md border bg-muted px-3 py-2 text-sm">{smsMsg}</div>}
             {!codeSent ? (
               <>
-                <TextField
-                  label="Phone number"
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  placeholder="+31612345678"
-                  fullWidth
-                />
-                <Button variant="outlined" fullWidth onClick={async () => {
-                  try {
-                    await api.post('/auth/forgot-password-sms', { phone })
-                    setSmsMsg('Code verstuurd als het nummer bekend is')
-                    setCodeSent(true)
-                  } catch (e: any) {
-                    setSmsMsg(e?.response?.data?.error || 'Fout bij verzenden')
-                  }
-                }}>Send reset code</Button>
+                <div className="grid gap-2">
+                  <Label htmlFor="phone">{t('common.phoneNumber')}</Label>
+                  <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+31612345678" />
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      await api.post('/auth/forgot-password-sms', { phone })
+                      setSmsMsg(t('resetPage.smsSent'))
+                      setCodeSent(true)
+                    } catch (e: any) {
+                      setSmsMsg(e?.response?.data?.error || t('resetPage.smsSendError'))
+                    }
+                  }}
+                >
+                  {t('resetPage.sendResetCode')}
+                </Button>
               </>
             ) : (
               <>
-                <TextField
-                  label="SMS code"
-                  value={smsCode}
-                  onChange={e => setSmsCode(e.target.value)}
-                  fullWidth
-                />
-                <TextField
-                  type="password"
-                  label="New password"
-                  value={smsNewPassword}
-                  onChange={e => setSmsNewPassword(e.target.value)}
-                  fullWidth
-                />
-                <Button variant="contained" fullWidth onClick={async () => {
-                  try {
-                    await api.post('/auth/reset-password-sms', { phone, code: smsCode, newPassword: smsNewPassword })
-                    setSmsMsg('Wachtwoord gewijzigd!')
-                  } catch (e: any) {
-                    setSmsMsg(e?.response?.data?.error || 'Reset mislukt')
-                  }
-                }}>Reset password</Button>
-                <Button variant="text" onClick={() => { setCodeSent(false); setSmsMsg('') }}>
-                  Resend code
+                <div className="grid gap-2">
+                  <Label htmlFor="smsCode">{t('resetPage.smsCode')}</Label>
+                  <Input id="smsCode" value={smsCode} onChange={(e) => setSmsCode(e.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="smsNewPassword">{t('common.newPassword')}</Label>
+                  <Input id="smsNewPassword" type="password" value={smsNewPassword} onChange={(e) => setSmsNewPassword(e.target.value)} />
+                </div>
+                <Button
+                  onClick={async () => {
+                    try {
+                      await api.post('/auth/reset-password-sms', { phone, code: smsCode, newPassword: smsNewPassword })
+                      setSmsMsg(t('resetPage.resetSuccess'))
+                    } catch (e: any) {
+                      setSmsMsg(e?.response?.data?.error || t('resetPage.resetError'))
+                    }
+                  }}
+                >
+                  {t('resetPage.resetPassword')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setCodeSent(false)
+                    setSmsMsg('')
+                  }}
+                >
+                  {t('resetPage.resendCode')}
                 </Button>
               </>
             )}
           </>
         )}
-      </Stack>
-    </Paper>
+      </CardContent>
+    </Card>
   )
 }

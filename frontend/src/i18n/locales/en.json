@@ -1,0 +1,85 @@
+{
+  "app": {
+    "name": "tinyauth user management"
+  },
+  "nav": {
+    "login": "Login",
+    "signup": "Sign up",
+    "reset": "Reset",
+    "account": "Account"
+  },
+  "theme": {
+    "toggle": "Toggle theme"
+  },
+  "language": {
+    "toggle": "Switch language"
+  },
+  "common": {
+    "username": "Username",
+    "email": "Email",
+    "password": "Password",
+    "newPassword": "New password",
+    "save": "Save",
+    "enable": "Enable",
+    "disable": "Disable",
+    "code": "Code",
+    "token": "Token",
+    "phone": "Phone",
+    "phoneOptional": "Phone (optional)",
+    "phoneNumber": "Phone number",
+    "loading": "Loading..."
+  },
+  "loginPage": {
+    "title": "tinyauth",
+    "description": "Sign in to your account",
+    "submit": "Login",
+    "createAccount": "Create account",
+    "forgotPassword": "Forgot password?",
+    "success": "Logged in",
+    "error": "Login failed"
+  },
+  "signupPage": {
+    "title": "Sign up",
+    "description": "Create a local account",
+    "submit": "Create account",
+    "status": "Sign-up status: {{status}}",
+    "error": "Sign-up failed",
+    "phoneHelp": "For SMS password reset"
+  },
+  "resetPage": {
+    "title": "Reset password",
+    "description": "Reset by token or SMS code",
+    "tabEmail": "Email",
+    "tabSms": "SMS",
+    "usernameOrEmail": "Username or email",
+    "requestReset": "Send reset link",
+    "requestResetSuccess": "If the user exists, a reset email has been sent (or logged).",
+    "resetPassword": "Reset password",
+    "resetSuccess": "Password updated",
+    "resetError": "Reset failed",
+    "sendResetCode": "Send reset code",
+    "smsCode": "SMS code",
+    "resendCode": "Resend code",
+    "smsSent": "Code sent if the number is known",
+    "smsSendError": "Could not send code"
+  },
+  "accountPage": {
+    "title": "Account",
+    "description": "Manage profile, password, and TOTP",
+    "notLoggedIn": "Not logged in",
+    "profile": "Profile",
+    "totpEnabled": "TOTP enabled",
+    "changePassword": "Change password",
+    "currentPassword": "Current password",
+    "passwordChanged": "Password changed",
+    "genericError": "Something went wrong",
+    "phoneUpdated": "Phone number updated",
+    "totpSetup": "TOTP setup",
+    "generateSecret": "Generate secret",
+    "secret": "Secret",
+    "totpEnabledSuccess": "TOTP enabled",
+    "totpDisabledSuccess": "TOTP disabled",
+    "recoveryCodes": "Recovery codes",
+    "totpQrAlt": "TOTP QR code"
+  }
+}

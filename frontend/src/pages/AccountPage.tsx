@@ -1,9 +1,21 @@
-import { Alert, Button, Card, CardContent, Divider, Paper, Stack, TextField, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../api/client'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
+
+type Profile = {
+  username: string
+  totpEnabled: boolean
+  phone?: string
+}
 
 export default function AccountPage() {
-  const [profile, setProfile] = useState<any>(null)
+  const { t } = useTranslation()
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [msg, setMsg] = useState('')
   const [oldPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -19,145 +31,156 @@ export default function AccountPage() {
       setProfile(data)
       setPhone(data.phone || '')
     } catch {
-      setMsg('Niet ingelogd')
+      setMsg(t('accountPage.notLoggedIn'))
     }
   }
-  useEffect(() => { load() }, [])
+
+  useEffect(() => {
+    void load()
+  }, [])
 
   return (
-    <Paper
-      elevation={2}
-      sx={{
-        width: '100%',
-        maxWidth: 480,
-        p: { xs: 2, sm: 4 },
-        mt: { xs: 2, sm: 4 },
-      }}
-    >
-      <Stack spacing={2}>
-        <Typography variant="h5" textAlign="center">Account</Typography>
-        {msg && <Alert severity="info">{msg}</Alert>}
+    <Card className="min-w-xs sm:min-w-sm">
+      <CardHeader>
+        <CardTitle className="text-center text-3xl">{t('accountPage.title')}</CardTitle>
+        <CardDescription className="text-center">{t('accountPage.description')}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {msg && <div className="rounded-md border bg-muted px-3 py-2 text-sm">{msg}</div>}
 
         {profile && (
-          <Card variant="outlined">
-            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
-              <Typography>Username: {profile.username}</Typography>
-              <Typography>TOTP enabled: {String(profile.totpEnabled)}</Typography>
-              {profile.phone && <Typography>Phone: {profile.phone}</Typography>}
-            </CardContent>
-          </Card>
+          <div className="rounded-md border bg-background/45 p-3 text-sm">
+            <p>
+              <span className="font-medium">{t('common.username')}:</span> {profile.username}
+            </p>
+            <p>
+              <span className="font-medium">{t('accountPage.totpEnabled')}:</span> {String(profile.totpEnabled)}
+            </p>
+            {profile.phone && (
+              <p>
+                <span className="font-medium">{t('common.phone')}:</span> {profile.phone}
+              </p>
+            )}
+          </div>
         )}
 
-        <Divider />
-        <Typography variant="h6">Wachtwoord wijzigen</Typography>
-        <TextField
-          type="password"
-          label="Old password"
-          value={oldPassword}
-          onChange={e => setOldPassword(e.target.value)}
-          fullWidth
-          size="small"
-        />
-        <TextField
-          type="password"
-          label="New password"
-          value={newPassword}
-          onChange={e => setNewPassword(e.target.value)}
-          fullWidth
-          size="small"
-        />
-        <Button variant="contained" fullWidth onClick={async () => {
-          try {
-            await api.post('/account/change-password', { oldPassword, newPassword })
-            setMsg('Wachtwoord gewijzigd')
-            setOldPassword('')
-            setNewPassword('')
-          } catch (e: any) {
-            setMsg(e?.response?.data?.error || 'Fout')
-          }
-        }}>Change password</Button>
+        <Separator />
+        <h3 className="text-base font-semibold">{t('accountPage.changePassword')}</h3>
+        <div className="grid gap-2">
+          <Label htmlFor="oldPassword">{t('accountPage.currentPassword')}</Label>
+          <Input id="oldPassword" type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="newPassword">{t('common.newPassword')}</Label>
+          <Input id="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+        </div>
+        <Button
+          onClick={async () => {
+            try {
+              await api.post('/account/change-password', { oldPassword, newPassword })
+              setMsg(t('accountPage.passwordChanged'))
+              setOldPassword('')
+              setNewPassword('')
+            } catch (e: any) {
+              setMsg(e?.response?.data?.error || t('accountPage.genericError'))
+            }
+          }}
+        >
+          {t('accountPage.changePassword')}
+        </Button>
 
-        <Divider />
-        <Typography variant="h6">Phone number</Typography>
-        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
-          <TextField
-            label="Phone"
+        <Separator />
+        <h3 className="text-base font-semibold">{t('common.phoneNumber')}</h3>
+        <div className="flex flex-wrap gap-2">
+          <Input
             value={phone}
-            onChange={e => setPhone(e.target.value)}
+            onChange={(e) => setPhone(e.target.value)}
             placeholder="+31612345678"
-            size="small"
-            sx={{ flex: 1, minWidth: 180 }}
+            className="flex-1 min-w-[180px]"
           />
-          <Button variant="outlined" onClick={async () => {
-            try {
-              await api.post('/account/phone', { phone })
-              setMsg('Phone updated')
-              load()
-            } catch (e: any) {
-              setMsg(e?.response?.data?.error || 'Fout')
-            }
-          }}>Save</Button>
-        </Stack>
+          <Button
+            variant="outline"
+            onClick={async () => {
+              try {
+                await api.post('/account/phone', { phone })
+                setMsg(t('accountPage.phoneUpdated'))
+                void load()
+              } catch (e: any) {
+                setMsg(e?.response?.data?.error || t('accountPage.genericError'))
+              }
+            }}
+          >
+            {t('common.save')}
+          </Button>
+        </div>
 
-        <Divider />
-        <Typography variant="h6">TOTP setup</Typography>
-        <Button variant="outlined" fullWidth onClick={async () => {
-          const data = (await api.post('/account/totp/setup')).data
-          setTotpSecret(data.secret)
-          setQrPng(data.qrPng)
-        }}>Generate secret</Button>
-        {qrPng && (
-          <img
-            src={qrPng}
-            width={220}
-            style={{ alignSelf: 'center', maxWidth: '100%' }}
-            alt="TOTP QR"
-          />
-        )}
+        <Separator />
+        <h3 className="text-base font-semibold">{t('accountPage.totpSetup')}</h3>
+        <Button
+          variant="outline"
+          onClick={async () => {
+            const data = (await api.post('/account/totp/setup')).data
+            setTotpSecret(data.secret)
+            setQrPng(data.qrPng)
+          }}
+        >
+          {t('accountPage.generateSecret')}
+        </Button>
+
+        {qrPng && <img src={qrPng} width={220} className="self-center max-w-full rounded-md border" alt={t('accountPage.totpQrAlt')} />}
+
         {totpSecret && (
-          <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-            Secret: {totpSecret}
-          </Typography>
+          <p className="rounded-md border bg-background/45 p-2 text-xs break-all">
+            {t('accountPage.secret')}: {totpSecret}
+          </p>
         )}
-        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
-          <TextField
-            label="Code"
-            value={totpCode}
-            onChange={e => setTotpCode(e.target.value)}
-            size="small"
-            sx={{ flex: 1, minWidth: 120 }}
-          />
-          <Button variant="contained" onClick={async () => {
-            try {
-              await api.post('/account/totp/enable', { secret: totpSecret, code: totpCode })
-              setMsg('TOTP enabled')
-              load()
-            } catch (e: any) {
-              setMsg(e?.response?.data?.error || 'Fout')
-            }
-          }}>Enable</Button>
-        </Stack>
 
-        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
-          <TextField
-            type="password"
-            label="Password"
-            value={disablePassword}
-            onChange={e => setDisablePassword(e.target.value)}
-            size="small"
-            sx={{ flex: 1, minWidth: 120 }}
+        <div className="flex flex-wrap gap-2">
+          <Input
+            value={totpCode}
+            onChange={(e) => setTotpCode(e.target.value)}
+            placeholder={t('common.code')}
+            className="flex-1 min-w-[120px]"
           />
-          <Button variant="outlined" onClick={async () => {
-            try {
-              await api.post('/account/totp/disable', { password: disablePassword })
-              setMsg('TOTP disabled')
-              load()
-            } catch (e: any) {
-              setMsg(e?.response?.data?.error || 'Fout')
-            }
-          }}>Disable</Button>
-        </Stack>
-      </Stack>
-    </Paper>
+          <Button
+            onClick={async () => {
+              try {
+                await api.post('/account/totp/enable', { secret: totpSecret, code: totpCode })
+                setMsg(t('accountPage.totpEnabledSuccess'))
+                void load()
+              } catch (e: any) {
+                setMsg(e?.response?.data?.error || t('accountPage.genericError'))
+              }
+            }}
+          >
+            {t('common.enable')}
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Input
+            type="password"
+            value={disablePassword}
+            onChange={(e) => setDisablePassword(e.target.value)}
+            placeholder={t('common.password')}
+            className="flex-1 min-w-[120px]"
+          />
+          <Button
+            variant="outline"
+            onClick={async () => {
+              try {
+                await api.post('/account/totp/disable', { password: disablePassword })
+                setMsg(t('accountPage.totpDisabledSuccess'))
+                void load()
+              } catch (e: any) {
+                setMsg(e?.response?.data?.error || t('accountPage.genericError'))
+              }
+            }}
+          >
+            {t('common.disable')}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

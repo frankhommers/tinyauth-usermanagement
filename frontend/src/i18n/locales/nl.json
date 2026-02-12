@@ -1,0 +1,85 @@
+{
+  "app": {
+    "name": "tinyauth gebruikersbeheer"
+  },
+  "nav": {
+    "login": "Inloggen",
+    "signup": "Registreren",
+    "reset": "Herstel",
+    "account": "Account"
+  },
+  "theme": {
+    "toggle": "Thema wisselen"
+  },
+  "language": {
+    "toggle": "Taal wisselen"
+  },
+  "common": {
+    "username": "Gebruikersnaam",
+    "email": "E-mailadres",
+    "password": "Wachtwoord",
+    "newPassword": "Nieuw wachtwoord",
+    "save": "Opslaan",
+    "enable": "Inschakelen",
+    "disable": "Uitschakelen",
+    "code": "Code",
+    "token": "Token",
+    "phone": "Telefoon",
+    "phoneOptional": "Telefoon (optioneel)",
+    "phoneNumber": "Telefoonnummer",
+    "loading": "Laden..."
+  },
+  "loginPage": {
+    "title": "tinyauth",
+    "description": "Log in op je account",
+    "submit": "Inloggen",
+    "createAccount": "Account aanmaken",
+    "forgotPassword": "Wachtwoord vergeten?",
+    "success": "Ingelogd",
+    "error": "Inloggen mislukt"
+  },
+  "signupPage": {
+    "title": "Registreren",
+    "description": "Maak een lokaal account aan",
+    "submit": "Account aanmaken",
+    "status": "Status registratie: {{status}}",
+    "error": "Registreren mislukt",
+    "phoneHelp": "Voor wachtwoordherstel via sms"
+  },
+  "resetPage": {
+    "title": "Wachtwoord herstellen",
+    "description": "Herstel via token of sms-code",
+    "tabEmail": "E-mail",
+    "tabSms": "SMS",
+    "usernameOrEmail": "Gebruikersnaam of e-mailadres",
+    "requestReset": "Herstellink versturen",
+    "requestResetSuccess": "Als de gebruiker bestaat, is er een herstelmail gestuurd (of gelogd).",
+    "resetPassword": "Wachtwoord herstellen",
+    "resetSuccess": "Wachtwoord gewijzigd",
+    "resetError": "Herstellen mislukt",
+    "sendResetCode": "Herstelcode versturen",
+    "smsCode": "Sms-code",
+    "resendCode": "Code opnieuw sturen",
+    "smsSent": "Code verstuurd als het nummer bekend is",
+    "smsSendError": "Code versturen is mislukt"
+  },
+  "accountPage": {
+    "title": "Account",
+    "description": "Beheer je profiel, wachtwoord en TOTP",
+    "notLoggedIn": "Niet ingelogd",
+    "profile": "Profiel",
+    "totpEnabled": "TOTP ingeschakeld",
+    "changePassword": "Wachtwoord wijzigen",
+    "currentPassword": "Huidig wachtwoord",
+    "passwordChanged": "Wachtwoord gewijzigd",
+    "genericError": "Er ging iets mis",
+    "phoneUpdated": "Telefoonnummer bijgewerkt",
+    "totpSetup": "TOTP instellen",
+    "generateSecret": "Geheim genereren",
+    "secret": "Geheim",
+    "totpEnabledSuccess": "TOTP ingeschakeld",
+    "totpDisabledSuccess": "TOTP uitgeschakeld",
+    "recoveryCodes": "Herstelcodes",
+    "totpQrAlt": "TOTP QR-code"
+  }
+}

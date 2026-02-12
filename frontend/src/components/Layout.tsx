@@ -1,80 +1,76 @@
-import { AppBar, Box, Button, Container, Drawer, IconButton, List, ListItemButton, ListItemText, Toolbar, Typography, useMediaQuery, useTheme } from '@mui/material'
-import MenuIcon from '@mui/icons-material/Menu'
-import { Link as RouterLink, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
-import { useState } from 'react'
-
-const navItems = [
-  { label: 'Login', path: '/' },
-  { label: 'Signup', path: '/signup' },
-  { label: 'Reset', path: '/reset-password' },
-  { label: 'Account', path: '/account' },
-]
+import { NavLink } from 'react-router-dom'
+import { ThemeToggle } from './theme-toggle'
+import { LanguageSelector } from './language-toggle'
+import { cn } from '@/lib/utils'
+import { useTranslation } from 'react-i18next'
 
 export function Layout({ children }: { children: ReactNode }) {
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-  const location = useLocation()
+  const { t } = useTranslation()
+
+  const navItems = [
+    { label: t('nav.login'), path: '/' },
+    { label: t('nav.signup'), path: '/signup' },
+    { label: t('nav.reset'), path: '/reset-password' },
+    { label: t('nav.account'), path: '/account' },
+  ]
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <AppBar position="static">
-        <Toolbar>
-          {isMobile && (
-            <IconButton color="inherit" edge="start" onClick={() => setDrawerOpen(true)} sx={{ mr: 1 }}>
-              <MenuIcon />
-            </IconButton>
-          )}
-          <Typography variant="h6" sx={{ flexGrow: 1, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
-            tinyauth
-          </Typography>
-          {!isMobile && navItems.map(item => (
-            <Button
-              key={item.path}
-              color="inherit"
-              component={RouterLink}
-              to={item.path}
-              sx={{ fontWeight: location.pathname === item.path ? 700 : 400 }}
-            >
-              {item.label}
-            </Button>
-          ))}
-        </Toolbar>
-      </AppBar>
+    <div
+      className="relative min-h-svh bg-cover bg-center"
+      style={{ backgroundImage: 'url(/background.jpg)' }}
+    >
+      <div className="absolute inset-0 bg-black/45 dark:bg-black/55" />
 
-      <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-        <Box sx={{ width: 240, pt: 2 }}>
-          <List>
-            {navItems.map(item => (
-              <ListItemButton
+      <header className="relative z-10">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
+          <div className="rounded-md bg-card/80 px-3 py-1.5 text-sm font-semibold backdrop-blur-md">
+            {t('app.name')}
+          </div>
+          <div className="flex items-center gap-2">
+            <nav className="hidden sm:flex items-center gap-1 rounded-md border bg-card/75 p-1 backdrop-blur-md">
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    cn(
+                      'rounded-sm px-3 py-1.5 text-sm transition-colors',
+                      isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
+                    )
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+            </nav>
+            <LanguageSelector />
+            <ThemeToggle />
+          </div>
+        </div>
+        <div className="mx-auto max-w-5xl px-4 sm:hidden">
+          <nav className="flex items-center gap-1 rounded-md border bg-card/75 p-1 backdrop-blur-md">
+            {navItems.map((item) => (
+              <NavLink
                 key={item.path}
-                component={RouterLink}
                 to={item.path}
-                selected={location.pathname === item.path}
-                onClick={() => setDrawerOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'flex-1 rounded-sm px-2 py-1.5 text-center text-xs transition-colors',
+                    isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
+                  )
+                }
               >
-                <ListItemText primary={item.label} />
-              </ListItemButton>
+                {item.label}
+              </NavLink>
             ))}
-          </List>
-        </Box>
-      </Drawer>
+          </nav>
+        </div>
+      </header>
 
-      <Container
-        maxWidth="sm"
-        sx={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          mt: { xs: 2, sm: 4 },
-          px: { xs: 2, sm: 3 },
-          pb: 4,
-        }}
-      >
-        {children}
-      </Container>
-    </Box>
+      <main className="relative z-10 mx-auto flex min-h-[calc(100svh-72px)] max-w-5xl items-center justify-center px-4 pb-8">
+        <div className="w-full max-w-md">{children}</div>
+      </main>
+    </div>
   )
 }
